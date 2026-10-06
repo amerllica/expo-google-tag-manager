@@ -69,9 +69,11 @@ yarn expo prebuild --clean
 
 Rules:
 
-- Set at least one of `ios` or `android`. Prebuild fails otherwise.
+- Set at least one of `ios` or `android`.
 - Name each container file after its GTM id, like `GTM-XXXX.json`. The file must exist and contain valid JSON. GTM downloads already use this name.
 - `enablePreview` needs `ios.bundleIdentifier` and `android.package` in your app config.
+- The plugin checks the container files during `expo prebuild`, not when Expo reads the config. `expo start` and `eas update` work even where the `gtm/` folder is missing.
+- The plugin owns the native `container` and `containers` folders. Each prebuild replaces their contents, so a renamed or removed container does not stay behind. Turning off `enablePreview` or removing a platform also removes what the plugin added before.
 
 ## Export the container JSON
 
@@ -80,7 +82,7 @@ Rules:
 3. Save the file in your project (for example `gtm/GTM-XXXX.json`) and commit it.
 4. Repeat for the other platform's container.
 
-Re-run `yarn expo prebuild` after you replace a container file.
+Run `yarn expo prebuild` again after you replace a container file.
 
 ## Preview mode
 

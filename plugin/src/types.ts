@@ -5,8 +5,3 @@ export type GoogleTagManagerPluginProps = {
   android?: PlatformContainer;
   enablePreview?: boolean;
 };
-
-export type ResolvedContainer = {
-  sourcePath: string;
-  containerId: string;
-};

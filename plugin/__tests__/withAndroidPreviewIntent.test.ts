@@ -1,6 +1,6 @@
 import type { AndroidManifest } from 'expo/config-plugins';
 
-import { makeConfig, makeTempDir, runMod } from './helpers';
+import { makeConfig, runMod } from './helpers';
 import {
   addPreviewActivity,
   withAndroidPreviewIntent,
@@ -23,46 +23,51 @@ function makeManifest(): AndroidManifest {
   };
 }
 
-function previewActivities(manifest: AndroidManifest) {
-  return (manifest.manifest.application?.[0].activity ?? []).filter(
-    (activity) => activity.$['android:name'] === PREVIEW_ACTIVITY
+function activityNames(manifest: AndroidManifest) {
+  return (manifest.manifest.application?.[0].activity ?? []).map(
+    (activity) => activity.$['android:name']
   );
 }
 
-describe('Android preview intent', () => {
-  it('adds exactly one preview activity, even when applied twice', () => {
-    const manifest = addPreviewActivity(
-      addPreviewActivity(makeManifest(), 'com.example.app'),
-      'com.example.app'
-    );
+function runManifestMod(enabled: boolean, manifest: AndroidManifest, packageName?: string) {
+  const config = makeConfig({ android: { package: packageName } });
+  return runMod(withAndroidPreviewIntent(config, enabled), 'android', 'manifest', {}, manifest);
+}
 
-    expect(previewActivities(manifest)).toEqual([
-      {
-        $: {
-          'android:name': PREVIEW_ACTIVITY,
-          'android:exported': 'true',
-          'android:noHistory': 'true',
-        },
-        'intent-filter': [
-          {
-            action: [{ $: { 'android:name': 'android.intent.action.VIEW' } }],
-            category: [
-              { $: { 'android:name': 'android.intent.category.DEFAULT' } },
-              { $: { 'android:name': 'android.intent.category.BROWSABLE' } },
-            ],
-            data: [{ $: { 'android:scheme': 'tagmanager.c.com.example.app' } }],
-          },
-        ],
+describe('Android preview intent', () => {
+  it('adds exactly one preview activity, even when applied twice', async () => {
+    const once = await runManifestMod(true, makeManifest(), 'com.example.app');
+    const twice = await runManifestMod(true, once, 'com.example.app');
+
+    expect(activityNames(twice)).toEqual(['.MainActivity', PREVIEW_ACTIVITY]);
+    expect(twice.manifest.application?.[0].activity?.[1]).toEqual({
+      $: {
+        'android:name': PREVIEW_ACTIVITY,
+        'android:exported': 'true',
+        'android:noHistory': 'true',
       },
-    ]);
-    expect(manifest.manifest.application?.[0].activity).toHaveLength(2);
+      'intent-filter': [
+        {
+          action: [{ $: { 'android:name': 'android.intent.action.VIEW' } }],
+          category: [
+            { $: { 'android:name': 'android.intent.category.DEFAULT' } },
+            { $: { 'android:name': 'android.intent.category.BROWSABLE' } },
+          ],
+          data: [{ $: { 'android:scheme': 'tagmanager.c.com.example.app' } }],
+        },
+      ],
+    });
   });
 
-  it('throws when the Android package is missing', async () => {
-    const config = withAndroidPreviewIntent(makeConfig(makeTempDir(), { android: {} }));
+  it('removes the preview activity when preview is disabled', async () => {
+    const manifest = makeManifest();
+    addPreviewActivity(manifest, 'com.example.app');
 
-    await expect(runMod(config, 'android', 'manifest', {}, makeManifest())).rejects.toThrow(
-      'android.package'
-    );
+    expect(activityNames(await runManifestMod(false, manifest))).toEqual(['.MainActivity']);
+  });
+
+  it('needs a package name only when preview is enabled', async () => {
+    await expect(runManifestMod(true, makeManifest())).rejects.toThrow('android.package');
+    await expect(runManifestMod(false, makeManifest())).resolves.toBeDefined();
   });
 });

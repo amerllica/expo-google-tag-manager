@@ -1,18 +1,21 @@
 import { type ConfigPlugin, withDangerousMod } from 'expo/config-plugins';
 import path from 'path';
 
-import { copyContainer } from '../container';
-import type { ResolvedContainer } from '../types';
+import { removeContainerFolder, resolveContainerFile, writeContainerFolder } from '../container';
 
-export const withAndroidContainer: ConfigPlugin<ResolvedContainer> = (config, container) =>
+const ASSETS_CONTAINERS_FOLDER = 'app/src/main/assets/containers';
+
+export const withAndroidContainer: ConfigPlugin<string | undefined> = (config, container) =>
   withDangerousMod(config, [
     'android',
     (config) => {
-      const assetsContainersDir = path.join(
-        config.modRequest.platformProjectRoot,
-        'app/src/main/assets/containers'
-      );
-      copyContainer(container, assetsContainersDir);
+      const { projectRoot, platformProjectRoot } = config.modRequest;
+      const folder = path.join(platformProjectRoot, ASSETS_CONTAINERS_FOLDER);
+      if (container) {
+        writeContainerFolder(folder, resolveContainerFile(projectRoot, 'android', container));
+      } else {
+        removeContainerFolder(folder);
+      }
       return config;
     },
   ]);

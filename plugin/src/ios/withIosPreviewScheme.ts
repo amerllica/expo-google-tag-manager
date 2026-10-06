@@ -1,24 +1,35 @@
 import { type ConfigPlugin, type InfoPlist, withInfoPlist } from 'expo/config-plugins';
 
-export const withIosPreviewScheme: ConfigPlugin = (config) =>
+import { isPreviewScheme, missingAppIdError, previewScheme } from '../preview';
+
+export const withIosPreviewScheme: ConfigPlugin<boolean> = (config, enabled) =>
   withInfoPlist(config, (config) => {
-    const bundleIdentifier = config.ios?.bundleIdentifier;
-    if (!bundleIdentifier) {
-      throw new Error(
-        'expo-google-tag-manager: "ios.bundleIdentifier" is required when "enablePreview" is true'
-      );
+    removePreviewUrlSchemes(config.modResults);
+    if (enabled) {
+      const bundleIdentifier = config.ios?.bundleIdentifier;
+      if (!bundleIdentifier) throw missingAppIdError('ios.bundleIdentifier');
+      addPreviewUrlScheme(config.modResults, bundleIdentifier);
     }
-    config.modResults = addPreviewUrlScheme(config.modResults, bundleIdentifier);
     return config;
   });
 
-export function addPreviewUrlScheme(infoPlist: InfoPlist, bundleIdentifier: string): InfoPlist {
-  const scheme = `tagmanager.c.${bundleIdentifier}`;
-  const urlTypes = infoPlist.CFBundleURLTypes ?? [];
-  if (urlTypes.some((urlType) => urlType.CFBundleURLSchemes.includes(scheme))) return infoPlist;
+export function removePreviewUrlSchemes(infoPlist: InfoPlist) {
+  const urlTypes = (infoPlist.CFBundleURLTypes ?? []).flatMap((urlType) => {
+    const schemes = urlType.CFBundleURLSchemes.filter((scheme) => !isPreviewScheme(scheme));
+    if (schemes.length === urlType.CFBundleURLSchemes.length) return [urlType];
+    return schemes.length > 0 ? [{ ...urlType, CFBundleURLSchemes: schemes }] : [];
+  });
 
-  return {
-    ...infoPlist,
-    CFBundleURLTypes: [...urlTypes, { CFBundleURLSchemes: [scheme] }],
-  };
+  if (urlTypes.length > 0) {
+    infoPlist.CFBundleURLTypes = urlTypes;
+  } else {
+    delete infoPlist.CFBundleURLTypes;
+  }
+}
+
+export function addPreviewUrlScheme(infoPlist: InfoPlist, bundleIdentifier: string) {
+  infoPlist.CFBundleURLTypes = [
+    ...(infoPlist.CFBundleURLTypes ?? []),
+    { CFBundleURLSchemes: [previewScheme(bundleIdentifier)] },
+  ];
 }

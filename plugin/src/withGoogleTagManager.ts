@@ -2,7 +2,6 @@ import { type ConfigPlugin } from 'expo/config-plugins';
 
 import { withAndroidContainer } from './android/withAndroidContainer';
 import { withAndroidPreviewIntent } from './android/withAndroidPreviewIntent';
-import { resolveContainer } from './container';
 import { withIosContainer } from './ios/withIosContainer';
 import { withIosPreviewScheme } from './ios/withIosPreviewScheme';
 import type { GoogleTagManagerPluginProps } from './types';
@@ -18,17 +17,9 @@ export const withGoogleTagManager: ConfigPlugin<GoogleTagManagerPluginProps | vo
     );
   }
 
-  const projectRoot = config._internal?.projectRoot ?? process.cwd();
-
-  if (ios) {
-    config = withIosContainer(config, resolveContainer(projectRoot, 'ios', ios));
-    if (enablePreview) config = withIosPreviewScheme(config);
-  }
-
-  if (android) {
-    config = withAndroidContainer(config, resolveContainer(projectRoot, 'android', android));
-    if (enablePreview) config = withAndroidPreviewIntent(config);
-  }
-
+  config = withIosContainer(config, ios?.container);
+  config = withIosPreviewScheme(config, enablePreview && !!ios);
+  config = withAndroidContainer(config, android?.container);
+  config = withAndroidPreviewIntent(config, enablePreview && !!android);
   return config;
 };

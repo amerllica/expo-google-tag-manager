@@ -5,29 +5,32 @@ import {
   withAndroidManifest,
 } from 'expo/config-plugins';
 
+import { missingAppIdError, previewScheme } from '../preview';
+
 const PREVIEW_ACTIVITY = 'com.google.android.gms.tagmanager.TagManagerPreviewActivity';
 
-export const withAndroidPreviewIntent: ConfigPlugin = (config) =>
+export const withAndroidPreviewIntent: ConfigPlugin<boolean> = (config, enabled) =>
   withAndroidManifest(config, (config) => {
-    const packageName = config.android?.package;
-    if (!packageName) {
-      throw new Error(
-        'expo-google-tag-manager: "android.package" is required when "enablePreview" is true'
-      );
+    removePreviewActivity(config.modResults);
+    if (enabled) {
+      const packageName = config.android?.package;
+      if (!packageName) throw missingAppIdError('android.package');
+      addPreviewActivity(config.modResults, packageName);
     }
-    config.modResults = addPreviewActivity(config.modResults, packageName);
     return config;
   });
 
+export function removePreviewActivity(manifest: AndroidManifest) {
+  const application = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
+  application.activity = application.activity?.filter(
+    (activity) => activity.$['android:name'] !== PREVIEW_ACTIVITY
+  );
+}
+
 export function addPreviewActivity(manifest: AndroidManifest, packageName: string) {
   const application = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
-  const activities = application.activity ?? [];
-  if (activities.some((activity) => activity.$['android:name'] === PREVIEW_ACTIVITY)) {
-    return manifest;
-  }
-
   application.activity = [
-    ...activities,
+    ...(application.activity ?? []),
     {
       $: {
         'android:name': PREVIEW_ACTIVITY,
@@ -41,10 +44,9 @@ export function addPreviewActivity(manifest: AndroidManifest, packageName: strin
             { $: { 'android:name': 'android.intent.category.DEFAULT' } },
             { $: { 'android:name': 'android.intent.category.BROWSABLE' } },
           ],
-          data: [{ $: { 'android:scheme': `tagmanager.c.${packageName}` } }],
+          data: [{ $: { 'android:scheme': previewScheme(packageName) } }],
         },
       ],
     },
   ];
-  return manifest;
 }

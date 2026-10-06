@@ -1,0 +1,281 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    types:
+      - checks_requested
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  EXAMPLE_APP: expogoogletagmanagerexample
+  IOS_CONTAINER: GTM-IOS1234.json
+  ANDROID_CONTAINER: GTM-AND5678.json
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Lint files
+        run: yarn lint --max-warnings 0
+
+      - name: Typecheck files
+        run: yarn typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run unit tests
+        run: yarn test --maxWorkers=2 --coverage
+
+  build-library:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build package
+        run: yarn prepare
+
+      - name: Load the config plugin
+        run: node -e "const plugin = require('./app.plugin.js'); if (typeof (plugin.default ?? plugin) !== 'function') process.exit(1)"
+
+      - name: Check package contents
+        run: |
+          yarn pack --dry-run | tee pack.log
+          for file in app.plugin.js expo-module.config.json plugin/build/index.js ios/ExpoGoogleTagManager.podspec android/build.gradle; do
+            if ! grep -q " $file$" pack.log; then
+              echo "::error::$file is missing from the package"
+              exit 1
+            fi
+          done
+          if grep -E -q " (plugin/src/|plugin/__tests__/|example/|android/build/)|tsbuildinfo$" pack.log; then
+            echo "::error::The package contains files that must not be published"
+            exit 1
+          fi
+
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build config plugin
+        run: yarn build
+
+      - name: Install JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Finalize Android SDK
+        run: |
+          /bin/bash -c "yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null"
+
+      - name: Prebuild example app for Android
+        working-directory: example
+        run: yarn expo prebuild --platform android --no-install
+
+      - name: Check prebuild output
+        working-directory: example/android
+        run: |
+          test -f "app/src/main/assets/containers/$ANDROID_CONTAINER"
+          grep -q 'com.google.android.gms.tagmanager.TagManagerPreviewActivity' app/src/main/AndroidManifest.xml
+          grep -q 'android:scheme="tagmanager.c.expo.modules.googletagmanager.example"' app/src/main/AndroidManifest.xml
+
+      - name: Cache Gradle
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('example/android/gradle/wrapper/gradle-wrapper.properties', 'example/yarn.lock', 'android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Check GTM dependency
+        working-directory: example/android
+        run: |
+          ./gradlew :app:dependencies --configuration debugRuntimeClasspath --no-daemon | tee dependencies.log
+          grep -q 'com.google.android.gms:play-services-tagmanager' dependencies.log
+
+      - name: Build example for Android
+        working-directory: example/android
+        env:
+          JAVA_OPTS: '-XX:MaxHeapSize=6g'
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon
+
+      - name: Check container is in the APK
+        working-directory: example/android
+        run: unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -q "assets/containers/$ANDROID_CONTAINER"
+
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      RCT_USE_RN_DEP: 1
+      RCT_USE_PREBUILT_RNCORE: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build config plugin
+        run: yarn build
+
+      - name: Use latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
+
+      - name: Prebuild example app for iOS
+        working-directory: example
+        run: yarn expo prebuild --platform ios
+
+      - name: Check prebuild output
+        working-directory: example/ios
+        run: |
+          test -f "$EXAMPLE_APP/container/$IOS_CONTAINER"
+          grep -q 'lastKnownFileType = folder; name = container;' "$EXAMPLE_APP.xcodeproj/project.pbxproj"
+          grep -q '^  - GoogleTagManager' Podfile.lock
+
+      - name: Build example for iOS
+        working-directory: example/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace "$EXAMPLE_APP.xcworkspace" \
+            -scheme "$EXAMPLE_APP" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build -quiet
+
+      - name: Check container and preview scheme are in the app
+        working-directory: example/ios/build/Build/Products/Debug-iphonesimulator
+        run: |
+          test -f "$EXAMPLE_APP.app/container/$IOS_CONTAINER"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes' "$EXAMPLE_APP.app/Info.plist" | grep -q 'tagmanager.c.expo.modules.googletagmanager.example'
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test, build-library, build-android, build-ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/expo-google-tag-manager
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main"
+            exit 1
+          fi
+
+      - name: Check the tag matches package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          if [[ $VERSION == *-* ]]; then
+            echo "NPM_DIST_TAG=next" >> "$GITHUB_ENV"
+          else
+            echo "NPM_DIST_TAG=latest" >> "$GITHUB_ENV"
+          fi
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Update npm for trusted publishing
+        run: npm install --global npm@^11.5.1
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if npm view "expo-google-tag-manager@$VERSION" version > /dev/null 2>&1; then
+            echo "expo-google-tag-manager@$VERSION is already on npm, skipping publish"
+          else
+            if [ -n "$NODE_AUTH_TOKEN" ]; then
+              echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
+            fi
+            npm publish --provenance --access public --tag "$NPM_DIST_TAG"
+          fi
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists, skipping"
+          else
+            release_args=(--verify-tag --generate-notes)
+            if [ "$NPM_DIST_TAG" = next ]; then
+              release_args+=(--prerelease)
+            fi
+            gh release create "$GITHUB_REF_NAME" "${release_args[@]}"
+          fi

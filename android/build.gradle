@@ -1,16 +1,20 @@
+import groovy.json.JsonSlurper
+
 plugins {
   id 'com.android.library'
   id 'expo-module-gradle-plugin'
 }
 
+def packageVersion = new JsonSlurper().parse(file('../package.json')).version
+
 group = 'expo.modules.googletagmanager'
-version = '0.1.0'
+version = packageVersion
 
 android {
   namespace "expo.modules.googletagmanager"
   defaultConfig {
     versionCode 1
-    versionName "0.1.0"
+    versionName packageVersion
   }
 }
 

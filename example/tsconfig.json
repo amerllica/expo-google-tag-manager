@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-google-tag-manager": ["../src/index"],
+      "expo-google-tag-manager/*": ["../src/*"]
+    }
+  }
+}

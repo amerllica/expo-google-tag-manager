@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["ExpoGoogleTagManagerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.googletagmanager.ExpoGoogleTagManagerModule"]
+  }
+}

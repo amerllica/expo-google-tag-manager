@@ -1,6 +1,6 @@
 {
   "name": "expo-google-tag-manager",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Expo config plugin that sets up Google Tag Manager for Firebase on iOS and Android during prebuild",
   "scripts": {
     "build": "tsc --build plugin",

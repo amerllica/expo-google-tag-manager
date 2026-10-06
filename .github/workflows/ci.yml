@@ -254,15 +254,10 @@ jobs:
         run: npm install --global npm@^11.5.1
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if npm view "expo-google-tag-manager@$VERSION" version > /dev/null 2>&1; then
             echo "expo-google-tag-manager@$VERSION is already on npm, skipping publish"
           else
-            if [ -n "$NODE_AUTH_TOKEN" ]; then
-              echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
-            fi
             npm publish --provenance --access public --tag "$NPM_DIST_TAG"
           fi
 

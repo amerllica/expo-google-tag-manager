@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": [
+      "es2022"
+    ],
+    "types": [
+      "node"
+    ],
+    "rootDir": "src",
+    "outDir": "build",
+    "declaration": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true,
+    "tsBuildInfoFile": "build/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "src"
+  ]
+}

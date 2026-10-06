@@ -19,10 +19,6 @@ config.resolver.nodeModulesPaths = [
   path.resolve(__dirname, '../node_modules'),
 ];
 
-config.resolver.extraNodeModules = {
-  'expo-google-tag-manager': '..',
-};
-
 config.watchFolders = [path.resolve(__dirname, '..')];
 
 config.transformer.getTransformOptions = async () => ({

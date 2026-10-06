@@ -21,11 +21,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  EXAMPLE_APP: expogoogletagmanagerexample
-  IOS_CONTAINER: GTM-IOS1234.json
-  ANDROID_CONTAINER: GTM-AND5678.json
-
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -118,11 +113,8 @@ jobs:
         run: yarn expo prebuild --platform android --no-install
 
       - name: Check prebuild output
-        working-directory: example/android
-        run: |
-          test -f "app/src/main/assets/containers/$ANDROID_CONTAINER"
-          grep -q 'com.google.android.gms.tagmanager.TagManagerPreviewActivity' app/src/main/AndroidManifest.xml
-          grep -q 'android:scheme="tagmanager.c.expo.modules.googletagmanager.example"' app/src/main/AndroidManifest.xml
+        working-directory: example
+        run: yarn check:native android prebuild
 
       - name: Cache Gradle
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -147,8 +139,8 @@ jobs:
         run: ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon
 
       - name: Check container is in the APK
-        working-directory: example/android
-        run: unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -q "assets/containers/$ANDROID_CONTAINER"
+        working-directory: example
+        run: yarn check:native android app
 
   build-ios:
     runs-on: macos-latest
@@ -180,19 +172,17 @@ jobs:
         run: yarn expo prebuild --platform ios
 
       - name: Check prebuild output
-        working-directory: example/ios
-        run: |
-          test -f "$EXAMPLE_APP/container/$IOS_CONTAINER"
-          grep -q 'lastKnownFileType = folder; name = container;' "$EXAMPLE_APP.xcodeproj/project.pbxproj"
-          grep -q '^  - GoogleTagManager' Podfile.lock
+        working-directory: example
+        run: yarn check:native ios prebuild
 
       - name: Build example for iOS
         working-directory: example/ios
         run: |
           set -o pipefail
+          project_name=$(basename ./*.xcodeproj .xcodeproj)
           xcodebuild \
-            -workspace "$EXAMPLE_APP.xcworkspace" \
-            -scheme "$EXAMPLE_APP" \
+            -workspace "$project_name.xcworkspace" \
+            -scheme "$project_name" \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
@@ -201,10 +191,8 @@ jobs:
             build -quiet
 
       - name: Check container and preview scheme are in the app
-        working-directory: example/ios/build/Build/Products/Debug-iphonesimulator
-        run: |
-          test -f "$EXAMPLE_APP.app/container/$IOS_CONTAINER"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes' "$EXAMPLE_APP.app/Info.plist" | grep -q 'tagmanager.c.expo.modules.googletagmanager.example'
+        working-directory: example
+        run: yarn check:native ios app
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

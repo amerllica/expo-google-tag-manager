@@ -94,6 +94,8 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+        with:
+          install-example: 'true'
 
       - name: Build config plugin
         run: yarn build
@@ -158,6 +160,8 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+        with:
+          install-example: 'true'
 
       - name: Build config plugin
         run: yarn build

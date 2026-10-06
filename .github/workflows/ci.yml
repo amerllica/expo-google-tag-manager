@@ -225,11 +225,11 @@ jobs:
             exit 1
           fi
 
-      - name: Check the tag matches package.json
+      - name: Take the version from the tag
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+          VERSION=${GITHUB_REF_NAME#v}
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not a semantic version"
             exit 1
           fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
@@ -241,6 +241,9 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - name: Write the version into package.json
+        run: node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\\n');"
 
       - name: Update npm for trusted publishing
         run: npm install --global npm@^11.5.1

@@ -22,6 +22,28 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "../app.plugin.js",
+        {
+          "ios": {
+            "container": "./gtm/GTM-IOS1234.json"
+          },
+          "android": {
+            "container": "./gtm/GTM-AND5678.json"
+          },
+          "enablePreview": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ]
   }
 }

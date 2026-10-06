@@ -1,28 +1,19 @@
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView, Text } from 'react-native';
 
 export default function App() {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module API Example</Text>
-      </ScrollView>
+      <Text style={styles.header}>expo-google-tag-manager example</Text>
+      <Text style={styles.body}>
+        The config plugin copies the GTM containers from ./gtm into the native projects during
+        prebuild. Log events with @react-native-firebase/analytics to reach GTM.
+      </Text>
     </SafeAreaView>
   );
 }
 
-function Group(props: { name: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text style={styles.groupHeader}>{props.name}</Text>
-      {props.children}
-    </View>
-  );
-}
-
 const styles = {
-  header: { fontSize: 30, margin: 20 },
-  groupHeader: { fontSize: 20, marginBottom: 20 },
-  group: { margin: 20, backgroundColor: '#fff', borderRadius: 10, padding: 20 },
   container: { flex: 1, backgroundColor: '#eee' },
-  view: { flex: 1, height: 200 },
+  header: { fontSize: 24, margin: 20 },
+  body: { fontSize: 16, marginHorizontal: 20 },
 };

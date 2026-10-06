@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.author         = package['author']
   s.homepage       = package['homepage']
   s.platforms      = { :ios => '16.4' }
-  s.source         = { git: package['repository'] }
+  s.source         = { git: package['repository']['url'].delete_prefix('git+'), tag: "v#{s.version}" }
   s.static_framework = true
 
   s.dependency 'GoogleTagManager', '~> 9.2'

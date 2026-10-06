@@ -21,7 +21,10 @@
     "firebase",
     "analytics"
   ],
-  "repository": "https://github.com/amerllica/expo-google-tag-manager",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amerllica/expo-google-tag-manager.git"
+  },
   "bugs": {
     "url": "https://github.com/amerllica/expo-google-tag-manager/issues"
   },

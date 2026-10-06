@@ -9,7 +9,8 @@
     "test": "jest",
     "prepare": "tsc --build plugin",
     "open:ios": "node internal/module_scripts/open-ios.js",
-    "open:android": "node internal/module_scripts/open-android.js"
+    "open:android": "node internal/module_scripts/open-android.js",
+    "typecheck": "tsc -p plugin/__tests__"
   },
   "keywords": [
     "react-native",
@@ -63,7 +64,10 @@
           ]
         }
       ]
-    }
+    },
+    "testMatch": [
+      "**/__tests__/**/*.test.ts"
+    ]
   },
   "peerDependencies": {
     "expo": "*"

@@ -70,8 +70,7 @@ yarn expo prebuild --clean
 Rules:
 
 - Set at least one of `ios` or `android`. Prebuild fails otherwise.
-- The container file must exist, end in `.json` and contain valid JSON.
-- The container id (`GTM-XXXX`) is the destination file name. The plugin reads it from a top-level `containerId` key in the JSON, or else from the file name. Keep the file named like `GTM-XXXX.json` to be safe.
+- Name each container file after its GTM id, like `GTM-XXXX.json`. The file must exist and contain valid JSON. GTM downloads already use this name.
 - `enablePreview` needs `ios.bundleIdentifier` and `android.package` in your app config.
 
 ## Export the container JSON

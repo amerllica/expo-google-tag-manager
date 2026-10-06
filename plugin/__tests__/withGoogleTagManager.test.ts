@@ -9,7 +9,6 @@ describe('withGoogleTagManager props validation', () => {
   writeJson(projectRoot, 'gtm/GTM-ABC123.json', {});
   writeJson(projectRoot, 'gtm/GTM-BROKEN.json', '{ not json');
   writeJson(projectRoot, 'gtm/ios.json', {});
-  writeJson(projectRoot, 'gtm/named.json', { containerId: 'GTM-NAMED1' });
   writeJson(projectRoot, 'gtm/GTM-TEXT.txt', {});
 
   const apply = (props: Parameters<typeof withGoogleTagManager>[1]) =>
@@ -28,7 +27,7 @@ describe('withGoogleTagManager props validation', () => {
 
   it('throws when the file is not a .json file', () => {
     expect(() => apply({ android: { container: './gtm/GTM-TEXT.txt' } })).toThrow(
-      'must be a .json file'
+      'must be named after its GTM id'
     );
   });
 
@@ -38,8 +37,10 @@ describe('withGoogleTagManager props validation', () => {
     );
   });
 
-  it('throws when no GTM id can be found', () => {
-    expect(() => apply({ ios: { container: './gtm/ios.json' } })).toThrow('is not a GTM id');
+  it('throws when the file is not named after a GTM id', () => {
+    expect(() => apply({ ios: { container: './gtm/ios.json' } })).toThrow(
+      'must be named after its GTM id'
+    );
   });
 
   it('accepts a valid container for one platform', () => {
@@ -51,11 +52,5 @@ describe('withGoogleTagManager props validation', () => {
       sourcePath: path.join(projectRoot, 'gtm/GTM-ABC123.json'),
       containerId: 'GTM-ABC123',
     });
-  });
-
-  it('prefers the containerId key over the file basename', () => {
-    expect(resolveContainer(projectRoot, 'ios', { container: 'gtm/named.json' }).containerId).toBe(
-      'GTM-NAMED1'
-    );
   });
 });

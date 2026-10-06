@@ -3,7 +3,7 @@ import path from 'path';
 
 import type { PlatformContainer, ResolvedContainer } from './types';
 
-const CONTAINER_ID_PATTERN = /^GTM-[A-Z0-9]+$/;
+const CONTAINER_FILE_PATTERN = /^GTM-[A-Z0-9]+\.json$/;
 
 export function resolveContainer(
   projectRoot: string,
@@ -15,31 +15,18 @@ export function resolveContainer(
     throw new Error(`expo-google-tag-manager: ${platform} container ${reason}: ${sourcePath}`);
   };
 
-  if (path.extname(sourcePath) !== '.json') fail('must be a .json file');
+  if (!CONTAINER_FILE_PATTERN.test(path.basename(sourcePath))) {
+    fail('must be named after its GTM id, like GTM-XXXX.json');
+  }
   if (!fs.existsSync(sourcePath)) fail('file does not exist');
 
-  let contents: unknown;
   try {
-    contents = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+    JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
   } catch {
     fail('is not valid JSON');
   }
 
-  const containerId = readContainerId(contents) ?? path.basename(sourcePath, '.json');
-  if (!CONTAINER_ID_PATTERN.test(containerId)) {
-    fail(
-      `id "${containerId}" is not a GTM id; add a "containerId" key or name the file GTM-XXXX.json`
-    );
-  }
-
-  return { sourcePath, containerId };
-}
-
-function readContainerId(contents: unknown): string | undefined {
-  if (typeof contents !== 'object' || contents === null || !('containerId' in contents)) {
-    return undefined;
-  }
-  return typeof contents.containerId === 'string' ? contents.containerId : undefined;
+  return { sourcePath, containerId: path.basename(sourcePath, '.json') };
 }
 
 export function copyContainer(

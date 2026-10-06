@@ -26,7 +26,6 @@
   "author": "amerllica <amerllica@gmail.com> (https://github.com/amerllica)",
   "license": "MIT",
   "homepage": "https://github.com/amerllica/expo-google-tag-manager#readme",
-  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@types/jest": "^29.2.1",
@@ -51,5 +50,6 @@
     "expo": "*",
     "react": "*",
     "react-native": "*"
-  }
+  },
+  "packageManager": "yarn@4.18.1+sha512.b2e1e7524f654f2749d32b4ebcb4622473cb5bcbc485df2007e12a154e50162a4d795526768bc5f5b8f81717bfd79deb2472813d86fb5ae2eb551fa9c872b08f"
 }
